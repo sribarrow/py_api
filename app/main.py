@@ -1,14 +1,15 @@
 from curses.ascii import HT
 from typing import Optional
-from fastapi import FastAPI, Response, status, HTTPException, requests
+from fastapi import FastAPI, Response, status, HTTPException, requests, Depends
 from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
-# from . import models
-# from .database import Base, engine
+from . import models
+from .database import engine, get_db
+from sqlalchemy.orm import Session
 
-# models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -63,9 +64,14 @@ def get_all_posts():
     return posts
 
 ### routes
+@app.get("/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    print(posts)
+    return {"posts":posts}
 
 @app.get("/")
-def root(): 
+def root(db: Session = Depends(get_db)): 
     """
     root _summary_
 
@@ -74,18 +80,20 @@ def root():
     """
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
-    return {"payLoad": get_all_posts()}
+    posts = db.query(models.Post).all()
+    return {"posts": posts}
 
 @app.get("/posts")
-def get_posts():
-    return {"payLoad": get_all_posts()}
+def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    return {"posts": posts}
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post):
-    cursor.execute("""INSERT INTO posts(title, content) VALUES(%s, %s) RETURNING * """, (post.title, post.content))
-    new_post = cursor.fetchone()
-    conn.commit()
-    return {"payLoad" : new_post}
+def create_post(post: Post, db: Session = Depends(get_db)):
+    # cursor.execute("""INSERT INTO posts(title, content) VALUES(%s, %s) RETURNING * """, (post.title, post.content))
+    # new_post = cursor.fetchone()
+    # conn.commit()
+    return {"new_post" : "new_post"}
 
 @app.get("/posts/latest")
 def get_latest_post(response:Response):
